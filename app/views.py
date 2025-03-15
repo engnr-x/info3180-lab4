@@ -4,7 +4,9 @@ from flask import render_template, request, redirect, url_for, flash, session, a
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 from app.models import UserProfile
-from app.forms import LoginForm
+from app.forms import LoginForm, UploadForm
+from werkzeug.security import check_password_hash, generate_password_hash
+from .forms import UploadForm
 
 
 ###
@@ -24,15 +26,25 @@ def about():
 
 
 @app.route('/upload', methods=['POST', 'GET'])
+@login_required
 def upload():
     # Instantiate your form class
+    form = UploadForm()
 
-    # Validate file upload on submit
-    if form.validate_on_submit():
-        # Get file data and save to your uploads folder
+    if request.method=='GET':
+        return render_template('upload.html', form=form)
+    elif request.method=='POST':
 
-        flash('File Saved', 'success')
-        return redirect(url_for('home')) # Update this to redirect the user to a route that displays all uploaded image files
+        # Validate file upload on submit
+        if form.validate_on_submit():
+            # Get file data and save to your uploads folder
+            image_file = form.image.data
+            filename = secure_filename(image_file.filename)
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            image_file.save(image_path)
+
+            flash('File Saved', 'success')
+            return redirect(url_for('home')) # Update this to redirect the user to a route that displays all uploaded image files
 
     return render_template('upload.html')
 
@@ -41,9 +53,13 @@ def upload():
 def login():
     form = LoginForm()
 
-    # change this to actually validate the entire form submission
-    # and not just one field
-    if form.username.data:
+    if form.validate_on_submit():
+        username = form.username.data
+        password = form.password.data
+
+     # change this to actually validate the entire form submission
+     # and not just one field
+     #if form.username.data:
         # Get the username and password values from the form.
 
         # Using your model, query database for a user based on the username
@@ -52,10 +68,16 @@ def login():
         # Then store the result of that query to a `user` variable so it can be
         # passed to the login_user() method below.
 
+        user = UserProfile.query.filter_by(username = username).first()
+
         # Gets user id, load into session
-        login_user(user)
+        if user and check_password_hash(user.password,password):
+            login_user(user)
+            flash("You have successfully logged in")
+            return redirect(url_for("upload"))
 
         # Remember to flash a message to the user
+        flash("Invalid username or password")
         return redirect(url_for("home"))  # The user should be redirected to the upload form instead
     return render_template("login.html", form=form)
 
