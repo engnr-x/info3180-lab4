@@ -1,6 +1,6 @@
 import os
 from app import app, db, login_manager
-from flask import render_template, request, redirect, url_for, flash, session, abort
+from flask import render_template, request, redirect, url_for, flash, session, abort, send_from_directory
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.utils import secure_filename
 from app.models import UserProfile
@@ -86,6 +86,38 @@ def login():
 @login_manager.user_loader
 def load_user(id):
     return db.session.execute(db.select(UserProfile).filter_by(id=id)).scalar()
+
+
+#Exercise 6: Listing your uploaded files
+def get_uploaded_images():
+    uploadDir = app.config['UPLOAD_FOLDER']
+    lst = []
+    for root, dirs, files in os.walk(uploadDir):
+        for file in files:
+            if file.endswith(('.jpg', 'jpeg', 'png')):
+                lst.append(os.path.join(root,file))
+    return lst
+
+@app.route('/uploads/<filename>')
+def get_image(filename):
+    uploads_dir = app.config['UPLOAD_FOLDER']
+    return send_from_directory(os.path.join(os.getcwd(),uploads_dir), filename)
+
+@app.route('/files')
+@login_required
+def files():
+    images=get_uploaded_images()
+    print (images)
+    return render_template('files.html', images=images)
+
+
+#Exercise 7 - Create a logout route 
+@app.route('/logout')
+def logout():
+    logout_user()
+    flash("You have been logged out")
+    return redirect(url_for('home'))
+
 
 ###
 # The functions below should be applicable to all Flask apps.

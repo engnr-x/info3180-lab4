@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block main %}
+
+<link rel="stylesheet" href="/static/app.css">
+
+<ul>
+    {% for image in images %}
+    <li><img src="{{image}}" alt="{{image}}"></li>
+    {% endfor %}
+</ul>
+
+
+{% endblock %}
